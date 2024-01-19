@@ -116,7 +116,7 @@ defmodule OAuther do
     |> Enum.map_join("&", &percent_encode/1)
   end
 
-  defp read_private_key("-----BEGIN RSA PRIVATE KEY-----" <> _ = private_key) do
+  defp read_private_key("-----BEGIN " <> _ = private_key) do
     private_key
   end
 
