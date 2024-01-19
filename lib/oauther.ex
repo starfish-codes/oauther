@@ -32,7 +32,7 @@ defmodule OAuther do
     params = protocol_params(params, creds)
     signature = signature(verb, url, params, creds)
 
-    [{"oauth_signature", signature} | params]
+    [{"oauth_signature", signature} | params] |> Enum.sort_by(&elem(&1, 0))
   end
 
   @spec header(params) :: {header, params}
@@ -52,6 +52,7 @@ defmodule OAuther do
       {"oauth_version", "1.0"}
       | maybe_put_token(params, creds.token)
     ]
+    |> Enum.sort_by(&elem(&1, 0))
   end
 
   @spec signature(String.t(), URI.t() | String.t(), params, Credentials.t()) :: binary
