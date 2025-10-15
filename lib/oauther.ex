@@ -13,7 +13,7 @@ defmodule OAuther do
             consumer_secret: String.t(),
             token: nil | String.t(),
             token_secret: nil | String.t(),
-            method: :hmac_sha1 | :hmac_sha256 | :rsa_sha1 | :plaintext
+            method: :hmac_sha1 | :hmac_sha256 | :rsa_sha1 | :rsa_sha256 | :plaintext
           }
   end
 
@@ -32,7 +32,7 @@ defmodule OAuther do
     params = protocol_params(params, creds)
     signature = signature(verb, url, params, creds)
 
-    [{"oauth_signature", signature} | params]
+    [{"oauth_signature", signature} | params] |> Enum.sort_by(&elem(&1, 0))
   end
 
   @spec header(params) :: {header, params}
@@ -52,6 +52,7 @@ defmodule OAuther do
       {"oauth_version", "1.0"}
       | maybe_put_token(params, creds.token)
     ]
+    |> Enum.sort_by(&elem(&1, 0))
   end
 
   @spec signature(String.t(), URI.t() | String.t(), params, Credentials.t()) :: binary
@@ -76,6 +77,12 @@ defmodule OAuther do
   def signature(verb, url, params, %Credentials{method: :rsa_sha1} = creds) do
     base_string(verb, url, params)
     |> :public_key.sign(:sha, decode_private_key(creds.consumer_secret))
+    |> Base.encode64()
+  end
+
+  def signature(verb, url, params, %Credentials{method: :rsa_sha256} = creds) do
+    base_string(verb, url, params)
+    |> :public_key.sign(:sha256, decode_private_key(creds.consumer_secret))
     |> Base.encode64()
   end
 
@@ -109,7 +116,7 @@ defmodule OAuther do
     |> Enum.map_join("&", &percent_encode/1)
   end
 
-  defp read_private_key("-----BEGIN RSA PRIVATE KEY-----" <> _ = private_key) do
+  defp read_private_key("-----BEGIN " <> _ = private_key) do
     private_key
   end
 
@@ -188,6 +195,7 @@ defmodule OAuther do
   defp signature_method(:hmac_sha1), do: "HMAC-SHA1"
   defp signature_method(:hmac_sha256), do: "HMAC-SHA256"
   defp signature_method(:rsa_sha1), do: "RSA-SHA1"
+  defp signature_method(:rsa_sha256), do: "RSA-SHA256"
 
   defp percent_encode({key, value}) do
     {percent_encode(key), percent_encode(value)}
